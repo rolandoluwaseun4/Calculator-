@@ -79,9 +79,8 @@
 
     /* ── DISPLAY ── */
     #display {
-      flex-shrink: 0;
+      flex: 1;
       padding: 8px 20px 0;
-      min-height: 160px;
       display: flex; flex-direction: column; justify-content: flex-end;
     }
     #live-expr {
@@ -118,25 +117,26 @@
     /* ── BUTTONS ── */
     #buttons {
       flex-shrink: 0;
-      padding: 4px 12px 28px;
+      padding: 0 14px 32px;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      gap: 14px;
     }
     .btn {
       aspect-ratio: 1; border-radius: 50%;
       border: none; cursor: pointer;
-      font-size: 28px; font-weight: 400; color: #fff;
+      font-size: 32px; font-weight: 400; color: #fff;
       display: flex; align-items: center; justify-content: center;
       transition: filter .08s;
       touch-action: manipulation;
+      width: 100%;
     }
     .btn:active { filter: brightness(1.38); }
     .btn-orange { background: var(--orange); }
     .btn-gray   { background: var(--gray); color: #000; }
     .btn-dark   { background: var(--dark); }
     .backspace-icon {
-      width: 26px; height: 26px; stroke: #fff; fill: none;
+      width: 30px; height: 30px; stroke: #fff; fill: none;
       stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
     }
 
