@@ -37,7 +37,6 @@
       max-width: 430px; margin: 0 auto;
       display: flex; flex-direction: column;
       position: relative; overflow: hidden;
-      justify-content: space-between;
     }
 
     /* ── TOP BAR ── */
@@ -85,18 +84,18 @@
       display: flex; flex-direction: column; justify-content: flex-end;
     }
     #live-expr {
-      font-size: 72px; font-weight: 700;
+      font-size: 64px; font-weight: 800;
       color: #fff; text-align: left;
-      line-height: 1.05; word-break: break-all;
+      line-height: 1.0; word-break: break-all;
       letter-spacing: -2px;
     }
-    #live-expr.small  { font-size: 52px; letter-spacing: -1px; }
-    #live-expr.xsmall { font-size: 38px; letter-spacing: -0.5px; }
+    #live-expr.small  { font-size: 48px; letter-spacing: -1.5px; }
+    #live-expr.xsmall { font-size: 36px; letter-spacing: -0.5px; }
     #live-preview {
-      font-size: 36px; font-weight: 300;
+      font-size: 34px; font-weight: 300;
       color: rgba(255,255,255,0.38);
-      text-align: right; margin-top: 6px;
-      min-height: 44px; letter-spacing: -0.5px;
+      text-align: right; margin-top: 4px;
+      min-height: 42px; letter-spacing: -0.5px;
     }
 
     /* ── DRAG HANDLE ── */
@@ -118,18 +117,19 @@
     /* ── BUTTONS ── */
     #buttons {
       flex-shrink: 0;
-      padding: 4px 12px 0px;
+      padding: 0 16px env(safe-area-inset-bottom, 20px);
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      gap: 12px;
     }
     .btn {
       aspect-ratio: 1; border-radius: 50%;
       border: none; cursor: pointer;
-      font-size: 28px; font-weight: 400; color: #fff;
+      font-size: 32px; font-weight: 400; color: #fff;
       display: flex; align-items: center; justify-content: center;
       transition: filter .08s;
       touch-action: manipulation;
+      width: 100%;
     }
     .btn:active { filter: brightness(1.38); }
     .btn-orange { background: var(--orange); }
@@ -250,7 +250,7 @@
 
   <!-- DISPLAY -->
   <div id="display">
-    <div id="live-expr">0</div>
+    <div id="live-expr"></div>
     <div id="live-preview"></div>
   </div>
 
@@ -423,11 +423,11 @@ function updateDisplay() {
   const el   = document.getElementById('live-expr');
   const prev = document.getElementById('live-preview');
 
-  const display = expr === '' ? '0' : fmtExpr(dispExpr(expr));
+  const display = expr === '' ? '' : fmtExpr(dispExpr(expr));
   el.textContent = display;
 
-  if      (display.length > 18) el.className = 'xsmall';
-  else if (display.length > 12) el.className = 'small';
+  if      (display.length > 14) el.className = 'xsmall';
+  else if (display.length > 9)  el.className = 'small';
   else                          el.className = '';
 
   if (expr && !justEvaled) {
