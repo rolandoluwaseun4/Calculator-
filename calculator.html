@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Calculator</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#000000"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Calculator"/>
+  <link rel="apple-touch-icon" href="/icon-192.png"/>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+    :root {
+      --orange: #FF9500;
+      --gray:   #A5A5A5;
+      --dark:   #333333;
+      --bg:     #000000;
+    }
+    html, body {
+      height: 100%; width: 100%;
+      background: var(--bg);
+      overflow: hidden;
+      font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, sans-serif;
+    }
+    #app {
+      height: 100vh; width: 100%;
+      max-width: 430px; margin: 0 auto;
+      display: flex; flex-direction: column;
+      position: relative; overflow: hidden;
+    }
+
+    /* ── TOP BAR ── */
+    #topbar {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding: 14px 18px 6px;
+      position: relative; z-index: 20;
+    }
+    #menu-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 6px; color: #fff;
+      display: flex; flex-direction: column;
+      gap: 3.5px; align-items: center; justify-content: center;
+    }
+    #menu-btn span {
+      display: block; width: 4px; height: 4px;
+      background: #fff; border-radius: 50%;
+    }
+    #menu-dropdown {
+      display: none; position: absolute;
+      top: 48px; right: 14px;
+      background: #2c2c2e; border-radius: 14px;
+      overflow: hidden; z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      min-width: 180px;
+    }
+    #menu-dropdown.open { display: block; }
+    .menu-item {
+      padding: 15px 20px; font-size: 16px;
+      color: #fff; cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item:active { background: rgba(255,255,255,0.08); }
+    #menu-overlay {
+      display: none; position: fixed; inset: 0; z-index: 150;
+    }
+    #menu-overlay.open { display: block; }
+
+    /* ── DISPLAY ── */
+    #display {
+      flex-shrink: 0;
+      padding: 8px 20px 0;
+      min-height: 160px;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    #live-expr {
+      font-size: 72px; font-weight: 700;
+      color: #fff; text-align: left;
+      line-height: 1.05; word-break: break-all;
+      letter-spacing: -2px;
+    }
+    #live-expr.small  { font-size: 52px; letter-spacing: -1px; }
+    #live-expr.xsmall { font-size: 38px; letter-spacing: -0.5px; }
+    #live-preview {
+      font-size: 36px; font-weight: 300;
+      color: rgba(255,255,255,0.38);
+      text-align: right; margin-top: 6px;
+      min-height: 44px; letter-spacing: -0.5px;
+    }
+
+    /* ── DRAG HANDLE ── */
+    #handle-area {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: 14px 0 10px;
+      cursor: pointer; touch-action: pan-x;
+      z-index: 20;
+    }
+    #handle {
+      width: 36px; height: 4px;
+      background: rgba(255,255,255,0.28);
+      border-radius: 2px;
+      transition: background .2s;
+    }
+    #handle-area:active #handle { background: rgba(255,255,255,0.55); }
+
+    /* ── BUTTONS ── */
+    #buttons {
+      flex-shrink: 0;
+      padding: 4px 12px 28px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .btn {
+      aspect-ratio: 1; border-radius: 50%;
+      border: none; cursor: pointer;
+      font-size: 28px; font-weight: 400; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      transition: filter .08s;
+      touch-action: manipulation;
+    }
+    .btn:active { filter: brightness(1.38); }
+    .btn-orange { background: var(--orange); }
+    .btn-gray   { background: var(--gray); color: #000; }
+    .btn-dark   { background: var(--dark); }
+    .backspace-icon {
+      width: 26px; height: 26px; stroke: #fff; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    /* ── HISTORY DRAWER ── */
+    #history-drawer {
+      position: absolute; inset: 0;
+      background: #000;
+      transform: translateY(-100%);
+      transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+      z-index: 30;
+      display: flex; flex-direction: column;
+    }
+    #history-drawer.open { transform: translateY(0); }
+
+    #history-header {
+      flex-shrink: 0;
+      padding: 54px 20px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    #history-title {
+      font-size: 26px; font-weight: 700;
+      color: #fff; letter-spacing: -0.4px;
+    }
+    #history-close {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: #2c2c2e; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.65);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    #history-list {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 0 20px;
+      -webkit-overflow-scrolling: touch;
+    }
+    #history-list::-webkit-scrollbar { display: none; }
+
+    .history-entry {
+      display: flex; flex-direction: column;
+      align-items: flex-end;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+    }
+    .history-entry:last-child { border-bottom: none; }
+    .history-entry:active { opacity: 0.55; }
+    .history-expr {
+      font-size: 30px; font-weight: 300;
+      color: #fff; text-align: right;
+      line-height: 1.15; word-break: break-all;
+      letter-spacing: -0.3px;
+    }
+    .history-result {
+      font-size: 18px; font-weight: 300;
+      color: rgba(255,255,255,0.42);
+      text-align: right; margin-top: 3px;
+    }
+    .history-empty {
+      text-align: center; color: rgba(255,255,255,0.22);
+      font-size: 15px; padding: 80px 0;
+    }
+
+    /* Bottom handle inside drawer */
+    #drawer-bottom {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px 0 32px;
+      cursor: pointer; touch-action: pan-x;
+    }
+    #drawer-bottom-bar {
+      width: 36px; height: 4px;
+      background: rgba(255,255,255,0.28);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HISTORY DRAWER -->
+  <div id="history-drawer">
+    <div id="history-header">
+      <div id="history-title">History</div>
+      <button id="history-close" onclick="closeHistory()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div id="history-list"></div>
+    <div id="drawer-bottom">
+      <div id="drawer-bottom-bar"></div>
+    </div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div style="position:relative;">
+      <button id="menu-btn" onclick="toggleMenu()">
+        <span></span><span></span><span></span>
+      </button>
+      <div id="menu-dropdown">
+        <div class="menu-item" onclick="clearHistory()">Clear history</div>
+      </div>
+    </div>
+  </div>
+  <div id="menu-overlay" onclick="closeMenu()"></div>
+
+  <!-- DISPLAY -->
+  <div id="display">
+    <div id="live-expr">0</div>
+    <div id="live-preview"></div>
+  </div>
+
+  <!-- HANDLE -->
+  <div id="handle-area">
+    <div id="handle"></div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div id="buttons">
+    <button class="btn btn-gray"   onclick="pressAC()">AC</button>
+    <button class="btn btn-orange" onclick="pressKey('()')">( )</button>
+    <button class="btn btn-orange" onclick="pressKey('%')">%</button>
+    <button class="btn btn-orange" onclick="pressOp('/')">÷</button>
+
+    <button class="btn btn-dark" onclick="pressNum('7')">7</button>
+    <button class="btn btn-dark" onclick="pressNum('8')">8</button>
+    <button class="btn btn-dark" onclick="pressNum('9')">9</button>
+    <button class="btn btn-orange" onclick="pressOp('*')">×</button>
+
+    <button class="btn btn-dark" onclick="pressNum('4')">4</button>
+    <button class="btn btn-dark" onclick="pressNum('5')">5</button>
+    <button class="btn btn-dark" onclick="pressNum('6')">6</button>
+    <button class="btn btn-orange" onclick="pressOp('-')">−</button>
+
+    <button class="btn btn-dark" onclick="pressNum('1')">1</button>
+    <button class="btn btn-dark" onclick="pressNum('2')">2</button>
+    <button class="btn btn-dark" onclick="pressNum('3')">3</button>
+    <button class="btn btn-orange" onclick="pressOp('+')">+</button>
+
+    <button class="btn btn-dark" onclick="pressNum('0')">0</button>
+    <button class="btn btn-dark" onclick="pressKey('.')">.</button>
+    <button class="btn btn-dark" onclick="pressBackspace()">
+      <svg class="backspace-icon" viewBox="0 0 24 24">
+        <path d="M20 12H9"/>
+        <path d="M9 12l4-4"/>
+        <path d="M9 12l4 4"/>
+        <path d="M3.5 7l3-3H20v14H6.5l-3-3V7z"/>
+      </svg>
+    </button>
+    <button class="btn btn-orange" onclick="pressEquals()">=</button>
+  </div>
+
+</div>
+<script>
+// ── State ─────────────────────────────────────────────────────
+let expr = '';
+let justEvaled = false;
+let historyOpen = false;
+
+// ── History ───────────────────────────────────────────────────
+const HISTORY_KEY = 'calc_history_v2';
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch { return []; }
+}
+function saveHistory(entries) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); } catch {}
+}
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function pruneHistory(entries) {
+  const days = [...new Set(entries.map(e => e.day))].sort().reverse();
+  const keep = new Set(days.slice(0, 4));
+  return entries.filter(e => keep.has(e.day));
+}
+function addToHistory(expression, result) {
+  let entries = loadHistory();
+  entries.push({ day: todayStr(), expr: expression, result });
+  entries = pruneHistory(entries);
+  saveHistory(entries);
+}
+function clearHistory() {
+  saveHistory([]);
+  renderHistoryList([]);
+  closeMenu();
+}
+
+// ── Format helpers ────────────────────────────────────────────
+function formatNum(n) {
+  if (n === null || n === undefined) return '';
+  const s = String(n);
+  const [int, dec] = s.split('.');
+  const fmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return dec !== undefined ? fmt + '.' + dec : fmt;
+}
+function dispExpr(e) {
+  return e.replace(/\*/g, '×').replace(/\//g, '÷');
+}
+function fmtExpr(e) {
+  return e.replace(/\d+(\.\d+)?/g, m => formatNum(m));
+}
+
+// ── Render history ────────────────────────────────────────────
+function renderHistoryList(entries) {
+  const list = document.getElementById('history-list');
+  if (!entries || !entries.length) {
+    list.innerHTML = '<div class="history-empty">No history yet</div>';
+    return;
+  }
+  const reversed = [...entries].reverse();
+  list.innerHTML = reversed.map(({ expr: e, result: r }) => `
+    <div class="history-entry" onclick="reuseResult(${JSON.stringify(String(r))})">
+      <div class="history-expr">${fmtExpr(dispExpr(e))}</div>
+      <div class="history-result">${formatNum(r)}</div>
+    </div>
+  `).join('');
+}
+
+function reuseResult(r) {
+  expr = r;
+  justEvaled = true;
+  updateDisplay();
+  closeHistory();
+}
+
+// ── Drawer open/close ─────────────────────────────────────────
+function openHistory() {
+  if (historyOpen) return;
+  historyOpen = true;
+  renderHistoryList(loadHistory());
+  document.getElementById('history-drawer').classList.add('open');
+}
+function closeHistory() {
+  if (!historyOpen) return;
+  historyOpen = false;
+  document.getElementById('history-drawer').classList.remove('open');
+}
+
+// ── Drag gesture on handle ────────────────────────────────────
+function makeDraggable(el, onDown, onUp) {
+  let startY = 0;
+  let moved = false;
+
+  el.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    moved = false;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', e => {
+    const dy = e.touches[0].clientY - startY;
+    if (!moved) {
+      if (dy > 28)  { moved = true; onDown && onDown(); }
+      if (dy < -28) { moved = true; onUp   && onUp();   }
+    }
+  }, { passive: true });
+
+  // Also respond to click for desktop testing
+  el.addEventListener('click', () => {
+    if (!moved) {
+      if (onDown && !historyOpen) onDown();
+      else if (onUp && historyOpen) onUp();
+    }
+  });
+}
+
+makeDraggable(
+  document.getElementById('handle-area'),
+  openHistory,
+  closeHistory
+);
+makeDraggable(
+  document.getElementById('drawer-bottom'),
+  null,
+  closeHistory
+);
+
+// ── Display ───────────────────────────────────────────────────
+function updateDisplay() {
+  const el   = document.getElementById('live-expr');
+  const prev = document.getElementById('live-preview');
+
+  const display = expr === '' ? '0' : fmtExpr(dispExpr(expr));
+  el.textContent = display;
+
+  if      (display.length > 18) el.className = 'xsmall';
+  else if (display.length > 12) el.className = 'small';
+  else                          el.className = '';
+
+  if (expr && !justEvaled) {
+    try {
+      const val = safeEval(expr);
+      if (val !== null && String(val) !== expr)
+        prev.textContent = formatNum(val);
+      else prev.textContent = '';
+    } catch { prev.textContent = ''; }
+  } else {
+    prev.textContent = '';
+  }
+
+  const acBtn = document.querySelector('.btn-gray');
+  if (acBtn) acBtn.textContent = expr ? 'C' : 'AC';
+}
+
+// ── Safe eval ─────────────────────────────────────────────────
+function safeEval(e) {
+  try {
+    let p = e.replace(/(\d+(?:\.\d+)?)%/g, '($1/100)');
+    p = p.replace(/(\d)\(/g, '$1*(');
+    const r = Function('"use strict"; return (' + p + ')')();
+    if (!isFinite(r)) return null;
+    return parseFloat(r.toPrecision(12));
+  } catch { return null; }
+}
+
+// ── Buttons ───────────────────────────────────────────────────
+function pressNum(n) {
+  if (justEvaled) { expr = n; justEvaled = false; }
+  else expr += n;
+  updateDisplay();
+}
+function pressOp(op) {
+  justEvaled = false;
+  const last = expr.slice(-1);
+  if (['+','-','*','/'].includes(last)) expr = expr.slice(0,-1) + op;
+  else if (expr === '' && op === '-') expr = '-';
+  else if (expr !== '') expr += op;
+  updateDisplay();
+}
+function pressKey(k) {
+  if (k === '.') {
+    const parts = expr.split(/[\+\-\*\/]/);
+    if (parts[parts.length-1].includes('.')) return;
+    if (justEvaled) { expr = '0.'; justEvaled = false; }
+    else expr += expr === '' ? '0.' : '.';
+  } else if (k === '()') {
+    justEvaled = false;
+    const opens  = (expr.match(/\(/g)||[]).length;
+    const closes = (expr.match(/\)/g)||[]).length;
+    const last   = expr.slice(-1);
+    if (opens === closes || ['+','-','*','/','(',''].includes(last)) expr += '(';
+    else expr += ')';
+  } else if (k === '%') {
+    if (expr !== '') expr += '%';
+  }
+  updateDisplay();
+}
+function pressBackspace() {
+  if (justEvaled) { expr = ''; justEvaled = false; updateDisplay(); return; }
+  expr = expr.slice(0,-1);
+  updateDisplay();
+}
+function pressAC() {
+  expr = ''; justEvaled = false; updateDisplay();
+}
+function pressEquals() {
+  if (!expr || justEvaled) return;
+  const result = safeEval(expr);
+  if (result === null) return;
+  addToHistory(expr, result);
+  expr = String(result);
+  justEvaled = true;
+  updateDisplay();
+}
+
+// ── Menu ──────────────────────────────────────────────────────
+function toggleMenu() {
+  document.getElementById('menu-dropdown').classList.toggle('open');
+  document.getElementById('menu-overlay').classList.toggle('open');
+}
+function closeMenu() {
+  document.getElementById('menu-dropdown').classList.remove('open');
+  document.getElementById('menu-overlay').classList.remove('open');
+}
+
+// ── Keyboard ──────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') pressNum(e.key);
+  else if (e.key === '+') pressOp('+');
+  else if (e.key === '-') pressOp('-');
+  else if (e.key === '*') pressOp('*');
+  else if (e.key === '/') { e.preventDefault(); pressOp('/'); }
+  else if (e.key === '%') pressKey('%');
+  else if (e.key === '.') pressKey('.');
+  else if (e.key === 'Enter' || e.key === '=') pressEquals();
+  else if (e.key === 'Backspace') pressBackspace();
+  else if (e.key === 'Escape') { historyOpen ? closeHistory() : pressAC(); }
+});
+
+// ── Init ──────────────────────────────────────────────────────
+updateDisplay();
+
+// ── Register service worker ───────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
